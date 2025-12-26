@@ -1,4 +1,4 @@
-#Database Lab Project - Group 14
+# Database Lab Project - Group 14
 
 ## 1. Chủ Đề
 Gaming Cafe Management

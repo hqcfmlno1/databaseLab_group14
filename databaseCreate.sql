@@ -7,7 +7,7 @@ create table users(
     phone varchar(15) not null,
     balance numeric not null default 0.0,
     identity_card varchar(20) unique not null,
-    username varchar(30) unique not null,
+    username varchar(30) unique,
     password varchar(50) not null,
     status varchar(20) not null check (status in ('active','inactive')) default 'inactive'
 );
@@ -30,14 +30,14 @@ create table food(
     food_id serial primary key not null,
     name varchar(200) not null,
     price numeric not null,
-    stock int not null,
-    available varchar(3) not null check (available in ('yes','no'))
+    stock int ,
+    available varchar(3) check (available in ('yes','no'))
 );
 create table log(
     log_id serial primary key,
     user_id int not null,
     pc_id int not null,
-    start_time timestamp not null,
+    start_time timestamp not null default current_timestamp,
     end_time timestamp,
     total_cost numeric,
     constraint fk_user foreign key(user_id) references users(user_id),

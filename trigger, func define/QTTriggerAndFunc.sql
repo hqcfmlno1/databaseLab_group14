@@ -151,7 +151,7 @@ $$ language plpgsql;
 
 
 
--- trigger để cập nhật status của order, nếu hoàn thành hết thì update thành completed, nếu hủy hết thì update thành canceled
+--6. trigger để cập nhật status của order, nếu hoàn thành hết thì update thành completed, nếu hủy hết thì update thành canceled
 
 create or replace function func_update_status_order() returns trigger as
 $$
@@ -191,7 +191,7 @@ when (old.status is distinct from new.status)
 execute procedure func_update_status_order();
 
 
--- trigger nếu người dùng hủy nguyên order
+--7. trigger nếu người dùng hủy nguyên order
 
 create or replace function func_cancel_order() returns trigger as
 $$
@@ -210,7 +210,7 @@ for each row
 when (old.status is distinct from new.status and new.status = 'canceled')
 execute procedure func_cancel_order();
 
--- trigger nếu người dùng hủy món thì giảm total_cost và total_payment tương ứng
+--8. trigger nếu người dùng hủy món thì giảm total_cost và total_payment tương ứng
 
 create or replace function func_cancel_food() returns trigger as
 $$
@@ -219,7 +219,8 @@ declare
     ref_log_id int := (select log_id from orders where order_id = new.order_id);
 begin
     update logs
-    set total_cost = total_cost - (food_price*new.quantity);
+    set total_cost = total_cost - (food_price*new.quantity)
+    where log_id = ref_log_id;
 
     update orders
     set total_payment = total_payment - (food_price*new.quantity)
@@ -239,7 +240,7 @@ when (old.status is distinct from new.status and new.status = 'canceled')
 execute procedure func_cancel_food();
 
 
--- trigger update status của người dùng và balance khi log out, reset status của pc, tổng kết total_cost của logs
+--9. trigger update status của người dùng và balance khi log out, reset status của pc, tổng kết total_cost của logs
 
 create or replace function func_update_logout() returns trigger as
 $$
@@ -251,7 +252,7 @@ declare
     );
     total_amount_using_pc numeric := (select(price_per_hour * extract(epoch from (new.end_time - start_time))/3600) from logs where log_id = new.log_id);
 begin
-    update users set status = 'inactive', balance = balance - new.total_cost - total_amount_using_pc where user_id = new.user_id;
+    update users set status = 'inactive', balance = balance - coalesce(new.total_cost,0) - total_amount_using_pc where user_id = new.user_id;
     update computer set status = 'available' where pc_id = new.pc_id;
     update logs set total_cost = coalesce(total_cost,0) + total_amount_using_pc where log_id = new.log_id;
     return new;

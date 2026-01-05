@@ -104,3 +104,30 @@ INSERT INTO transaction (transaction_id, user_id, method, trans_date, amount) VA
 
 update transaction set amount = 5000 where amount < 5000;
 
+DO $$ 
+DECLARE
+    i INT;
+    random_amount NUMERIC;
+    random_method VARCHAR(20);
+    random_user_id INT;
+    random_trans_date TIMESTAMP;
+BEGIN
+    FOR i IN 1..200 LOOP
+        random_amount := (random() * (5000000 - 5000) + 5000)::NUMERIC;
+
+        IF random() > 0.5 THEN
+            random_method := 'tien_mat';
+        ELSE
+            random_method := 'chuyen_khoan';
+        END IF;
+
+        SELECT user_id INTO random_user_id
+        FROM users
+        ORDER BY random() LIMIT 1;
+
+        random_trans_date := NOW() - (random() * INTERVAL '60 days');
+
+        INSERT INTO transaction (user_id, method, trans_date, amount)
+        VALUES (random_user_id, random_method, random_trans_date, random_amount);
+    END LOOP;
+END $$;

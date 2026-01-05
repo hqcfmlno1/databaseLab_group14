@@ -101,3 +101,6 @@ INSERT INTO transaction (transaction_id, user_id, method, trans_date, amount) VA
 (96, 74, 'chuyen_khoan', '2025-12-30 23:46:44.318688', 377048.627899681),
 (97, 87, 'tien_mat', '2025-12-31 21:27:01.69799', 2000),
 (98, 24, 'chuyen_khoan', '2025-12-23 14:37:19.961279', 160393.343043907);
+
+update transaction set amount = 5000 where amount < 5000;
+

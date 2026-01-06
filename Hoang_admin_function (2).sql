@@ -1,5 +1,3 @@
---SELECT * FROM orders;
-
 --Các chức năng hệ thống
 
 --1.func dùng để đăng xuất tài khoản của user( có thể dùng cho user 
@@ -147,6 +145,63 @@ ORDER BY thoi_gian DESC;
 --DROP VIEW IF EXISTS view_user_balance_history;
 
 
+
+--Test các chức năng đã tạo
+--Bước 0: Làm sạch dữ liệu (Reset)
+--Sử dụng lệnh TRUNCATE để đưa tất cả về trạng thái trống.
+TRUNCATE TABLE order_detail, orders, transaction, logs, food, computer, pc_type, users RESTART IDENTITY CASCADE;
+
+--Bước 1: Thiết lập dữ liệu hệ thống
+--Tạo 1 loại máy (15k/giờ), 1 máy và 1 món ăn.
+INSERT INTO pc_type (price_per_hour, depreciation, original_cost, spec) VALUES (15000, 1000, 20000000, 'Gaming Gen 1');
+INSERT INTO computer (type_id, accessories, status, condition) VALUES (1, 'Phím cơ, Chuột logitech', 'available', 'good');
+INSERT INTO food (name, price, stock, available) VALUES ('Sting Dâu', 15000, 10, 'yes');
+
+-- Tạo 1 người dùng và nạp 100k
+INSERT INTO users(fullname, phone, identity_card, password) VALUES ('Admin Test', '0909', '999999', 'admin123');
+INSERT INTO transaction (user_id, method, amount) VALUES (1, 'chuyen_khoan', 100000);
+
+--Bước 2: Test func_login (Đăng nhập)
+-- Đăng nhập user 1 vào máy 1
+SELECT func_login(1, 1);
+
+-- Thử đăng nhập lại lần nữa (Sẽ báo lỗi vì user đã có log_id hoặc máy có người ngồi)
+-- SELECT func_login(1, 1);
+
+--Bước 3: Tạo Order (Để test việc trừ tiền món ăn trong func_check_current)
+--Giả sử bạn dùng hàm func_user_can_order đã tạo ở lượt trước:
+-- Đặt 1 chai Sting (15k)
+SELECT func_user_can_order(1, ARRAY[1], ARRAY[1]);
+
+-- Chuyển trạng thái order sang 'completed' để hàm func_check_current tính tiền
+UPDATE order_detail SET status = 'completed' WHERE order_id = 1;
+
+--Bước 4: Test func_check_current (Kiểm tra thời gian thực)
+--Bạn hãy đợi khoảng 1-2 phút sau khi đăng nhập rồi chạy lệnh này để thấy thời gian trôi đi.
+
+SELECT * FROM func_check_current(1);
+-- Kết quả mong đợi: 
+-- currentbalance = 100k - 15k (tiền Sting) - (số phút đã trôi qua * 15k/60)
+-- remainingtime = số giờ còn lại tương ứng với số dư.
+
+--Bước 5: Test func_logout (Đăng xuất)
+--Hàm này sẽ kích hoạt tg_after_logout để chốt sổ total_cost.
+SELECT func_logout(1);
+
+-- Kiểm tra xem máy đã trống và user đã inactive chưa
+SELECT * FROM computer WHERE pc_id = 1;
+SELECT * FROM users WHERE user_id = 1;
+
+--Bước 6: Test view_user_balance_history (Xem lịch sử biến động)
+--Sau khi đã nạp tiền và chơi xong 1 phiên, view này sẽ cho thấy bức tranh tổng thể tài chính của user.
+SELECT * FROM view_user_balance_history WHERE user_id = 1;
+
+-- Kết quả mong đợi 2 dòng:
+-- 1. Loại: CỘNG | Nội dung: Nạp tiền (chuyen_khoan) | Số tiền: 100000
+-- 2. Loại: TRỪ  | Nội dung: Chi phí phiên chơi (Máy ID: 1) | Số tiền: - (Tổng tiền máy + tiền đồ ăn)
+
+
+
 --Các câu query tự nghĩ thêm
 
 --1. Tìm Top 5 khách hàng nạp tiền nhiều nhất
@@ -202,3 +257,6 @@ SELECT
     SUM(amount) AS total_money
 FROM transaction
 GROUP BY method;
+
+
+

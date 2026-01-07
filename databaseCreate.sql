@@ -30,11 +30,11 @@ create table food(
     food_id serial primary key not null,
     name varchar(200) not null,
     price numeric not null,
-    stock int ,
+    stock int check (stock>=0),
     available varchar(3) check (available in ('yes','no'))
 );
-create table log(
-    log_id serial primary key,
+create table logs(
+    log_id serial primary key not null,
     user_id int not null,
     pc_id int not null,
     start_time timestamp not null default current_timestamp,
@@ -44,12 +44,12 @@ create table log(
     constraint fk_pc foreign key(pc_id) references computer(pc_id)
 );
 create table orders(
-    order_id serial primary key,
+    order_id serial primary key not null,
     order_date timestamp not null default current_timestamp,
-    total_payment numeric,
+    total_payment numeric not null,
     status varchar(30) not null check (status in ('pending','completed','canceled')),
     log_id int not null,
-    constraint fk_log foreign key(log_id) references log(log_id)
+    constraint fk_log foreign key(log_id) references logs(log_id)
 );
 create table order_detail(
     order_id int not null,

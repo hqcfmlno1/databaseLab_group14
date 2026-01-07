@@ -1,7 +1,4 @@
 -- 1. trigger for username = cccd
--- chú ý sửa lại trường username trong users thành nullable
-
-alter table users alter column username drop not null;
 
 create or replace function func_username_default() returns trigger as
 $$
@@ -21,7 +18,6 @@ execute procedure func_username_default();
 
 -- 2. trigger cập nhật total balance khi chèn vào transaction
 
-
 create or replace function func_update_balance_trans() returns trigger as
 $$
 begin
@@ -39,26 +35,15 @@ execute procedure func_update_balance_trans();
 
 insert into transaction (user_id, method, amount) values (1, 'tien_mat', 500000);
 
--- 3. trigger kiểm tra balance của người chơi trước khi log in
--- thêm default value cho start time trong log
--- đổi tên bảng log thành logs để tránh trùng với từ khóa
--- xóa constraint stock not null của food vì 1 số món ăn phải cần chế biến không có stock, xóa constraint available not null
-
-
-alter table food alter column stock drop not null;
-alter table food alter column available drop not null;
-
-alter table log
-alter column start_time set default current_timestamp;
-
-alter table log rename to logs;
+-- 3. trigger kiểm tra balance của người chơi trước khi log in (khi người chơi định log in thì hàm của hoàng được gọi nếu thành công thì trigger được sử dụng để check tài khoản)
+-- thực tế thì tài khoản của người chơi ko thể bé hơn 0 nhưng cứ thêm vào cho chắc có thể tk nào đó nợ (yapping) thực ra để = 0 cx được nhưng cứ thế này cho chắc
 
 create or replace function func_check_balance_before_log() returns trigger as
 $$
 declare
     current_balance numeric = (select balance from users where user_id = new.user_id);
 begin
-    if current_balance = 0.0 then
+    if current_balance <= 0.0 then
         raise notice 'khong du tien de su dung dich vu';
         return null;
     else
@@ -74,7 +59,6 @@ for each row
 execute procedure func_check_balance_before_log();
 
 insert into users(fullname,phone,identity_card,password) values ('Nguyen Van b','32423411','1231235','12345');
-
 
 
 -- 4. trigger để cập nhật status của computer và users khi log in thành công
@@ -97,7 +81,6 @@ execute procedure func_update_status_on_logs();
 -- 5. function để kiểm tra khả năng đặt order của user đang trong log nào đó
 -- chú ý rằng total_cost để mặc định ban đầu là null, nên tất các các log có total_cost là null là các log không có order nào
 -- thêm rằng buộc stock nếu có phải >=0
-alter table food add constraint check_stock check(stock is null or stock >=0);
 
 create or replace function func_user_can_order(logid int, foodids int[], quantities int[]) returns void as
 $$

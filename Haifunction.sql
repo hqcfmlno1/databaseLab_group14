@@ -49,3 +49,22 @@ begin
 	order by day desc;	
 end;
 $$ language plpgsql;
+
+--- 4 ham thay doi username
+create or replace function change_username(v_username text, v_password text, v_newname text)
+returns void as
+$$
+declare
+	v_user_id int;
+begin
+	if exists (
+		select 1 from users where (username = v_username and password = v_password)
+	) then 
+		select user_id into v_user_id from users where (username = v_username and password = v_password);
+		update users set username = v_newname where user_id = v_user_id;
+		raise notice 'Username da duoc thay doi';
+	else 
+		raise notice 'Sai username hoac password';
+	end if;
+end;
+$$ language plpgsql;

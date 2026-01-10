@@ -19,12 +19,25 @@ select change_password('1231235','12345', '123456');
 --2
 --view de xem cac mon an dang pending trong cai don hang cu the 
 create view pending_food as 
-	select o.order_id, pc_id, user_id, food_id, quantity from orders o
+	select o.order_id, pc_id, user_id, food_id, quantity, od.status from orders o
 	join order_detail od on o.order_id = od.order_id
 	join logs l on o.log_id = l.log_id
 	where od.status = 'pending'
 	order by o.order_id;
+--trigger update tren view
+create or replace function tf_update_status_food()
+returns trigger as
+$$
+begin 
+	update order_detail set status = NEW.status where order_id = OLD.order_id and food_id = OLD.food_id;
+	return new;
+end;
+$$ language plpgsql;
 
+create trigger tf_update_status 
+instead of update on pending_food
+for each row 
+execute function tf_update_status_food();
 ---3 tinh lai ma quan thu duoc trong k ngay gan nhat
 create or replace function calculate_profit(k INT)
 returns table (day date, total_deposit numeric, total_depreciation numeric, profit numeric) as
@@ -71,4 +84,5 @@ begin
 	raise notice 'Username đã được thay đổi';
 end;
 $$ language plpgsql;
+
 

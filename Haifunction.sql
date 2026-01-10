@@ -55,16 +55,20 @@ create or replace function change_username(v_username text, v_password text, v_n
 returns void as
 $$
 declare
-	v_user_id int;
+	cnt int;
 begin
-	if exists (
-		select 1 from users where (username = v_username and password = v_password)
-	) then 
-		select user_id into v_user_id from users where (username = v_username and password = v_password);
-		update users set username = v_newname where user_id = v_user_id;
-		raise notice 'Username da duoc thay doi';
-	else 
-		raise notice 'Sai username hoac password';
+	select count(user_id) into cnt from users where username = v_username and password = v_password;
+	if (cnt = 0) then 
+		raise notice 'Sai username hoặc password';
+		return;
 	end if;
+	select count(user_id) into cnt from users where username = v_newname;
+	if (cnt > 0 ) then
+		raise notice 'Username % đã tồn tại, vui lòng chọn user khác', v_newname;
+		return;
+	end if;
+	update users set username = v_newname where username = v_username and password = v_password;
+	raise notice 'Username đã được thay đổi';
 end;
 $$ language plpgsql;
+

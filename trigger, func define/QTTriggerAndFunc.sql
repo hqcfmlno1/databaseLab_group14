@@ -174,6 +174,45 @@ when (old.status is distinct from new.status)
 execute procedure func_update_status_order();
 
 
+-- another 
+create or replace function func_update_status_order2() returns trigger as
+$$
+declare
+    completed_exist boolean := (select exists (
+        select 1
+        from order_detail
+        where order_id = new.order_id and status = 'completed'
+    ));
+    canceled_exist boolean := (select exists (
+        select 1
+        from order_detail
+        where order_id = new.order_id and status = 'canceled'
+    ));
+    pending_exist boolean := (select exists (
+        select 1
+        from order_detail
+        where order_id = new.order_id and status = 'pending'
+    ));
+begin
+    if (canceled_exist = false and pending_exist = false) or (canceled_exist = true and pending_exist = false and completed_exist = true) then
+        update orders set status = 'completed' where order_id = new.order_id;
+        return new;
+    elseif (canceled_exist = true and pending_exist = false and completed_exist = false) then
+        update orders set status = 'canceled' where order_id = new.order_id;
+        return new;
+    else return new;
+    end if;
+end;
+$$ language plpgsql;
+create or replace trigger tg_check_status_order2
+after update on order_detail
+for each row
+when (old.status is distinct from new.status)
+execute procedure func_update_status_order2();
+
+
+
+
 --7. trigger nếu người dùng hủy nguyên order
 
 create or replace function func_cancel_order() returns trigger as
@@ -248,3 +287,20 @@ after update on logs
 for each row
 when (new.end_time is not null and old.end_time is distinct from new.end_time)
 execute procedure func_update_logout();
+
+
+-- hàm để user tìm kiếm theo tên của sản phẩm
+create extension unaccent;
+alter table food add column tsv tsvector;
+update food set tsv = to_tsvector('simple',name);
+
+create or replace function find_food_by_name(food_name text) returns table(foodname varchar(200)) as
+$$ 
+begin
+    return query(
+    select food.name from food 
+    where tsv @@ websearch_to_tsquery('simple',regexp_replace(lower(unaccent(food_name)),'\s+',' OR ','g'))
+    order by ts_rank(tsv,websearch_to_tsquery('simple',regexp_replace(lower(unaccent(food_name)),'\s+',' OR ','g'))) desc
+    );
+end;
+$$ language plpgsql;
